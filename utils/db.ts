@@ -9,12 +9,15 @@ export class Database extends Dexie {
         this.version(4).stores({
             history: '++id, session, type, role, content, src',
             tab: '++id, label'
-        }).upgrade(tx => {
-            return tx.table('history').toCollection().modify(item => {
-                if (item['is_img']) {
-                    item.type = 'image'
-                } else {
-                    item.type = 'text'
+        })
+        this.version(5).stores({
+            tab: '++id, label, created_at',
+            history: '++id, session, type, role, content, src, created_at',
+        }).upgrade(trans => {
+            return trans.table('history').toCollection().modify(async i => {
+                if (i.type === 'image') {
+                    i.content = ''
+                    i.src = [i.src]
                 }
             })
         })
@@ -31,16 +34,19 @@ export class Database extends Dexie {
     async getHistory(session: number) {
         const arr = await DB.history.where('session').equals(session).limit(100).toArray()
         arr.forEach(i => {
-            if (i.type === 'image' && i.src instanceof Blob) {
-                URL.revokeObjectURL(i.content)
-                i.content = URL.createObjectURL(i.src)
+            if (i.type === 'image') {
+                i.src_url = []
+                i.src?.forEach(src => {
+                    i.src_url!.push(URL.createObjectURL(src))
+                })
+                i.content = 'image'
             }
         })
         return arr
     }
 
     addTab(label: string) {
-        return DB.tab.add({label})
+        return DB.tab.add({label, created_at: Date.now()})
     }
 
     deleteTabAndHistory(id: number) {
@@ -55,60 +61,45 @@ export const DB = new Database();
 
 export const initialSettings = {
     openaiKey: '',
-    image_steps: 20
+    image_steps: 20,
+    system_prompt: 'You are ChatGPT, a large language model trained by OpenAI. Follow the user\'s instructions carefully. Respond using markdown.',
 }
 
 export type Settings = typeof initialSettings
 
+export const uniModals: Model[] = [
+    {
+        id: 'gemini-1.5-flash',
+        name: 'Gemini 1.5 flash',
+        provider: 'google',
+        type: 'universal'
+    }
+]
+
 export const textGenModels: Model[] = [{
-    id: 'gemini-pro',
-    name: 'Gemini Pro',
-    provider: 'google',
-    type: 'chat'
-}, {
     id: 'gpt-3.5-turbo',
     name: 'ChatGPT-3.5-turbo',
     provider: 'openai',
     endpoint: 'chat/completions',
     type: 'chat'
 }, {
-    id: '@cf/meta/llama-2-7b-chat-fp16',
-    name: 'llama-2-7b-chat-fp16',
+    id: '@cf/qwen/qwen1.5-14b-chat-awq',
+    name: 'qwen1.5-14b-chat-awq',
     provider: 'workers-ai',
     type: 'chat'
 }, {
-    id: '@cf/meta/llama-2-7b-chat-int8',
-    name: 'llama-2-7b-chat-int8',
+    id: '@cf/openchat/openchat-3.5-0106',
+    name: 'openchat-3.5-0106',
     provider: 'workers-ai',
     type: 'chat'
 }, {
-    id: '@cf/mistral/mistral-7b-instruct-v0.1',
-    name: 'mistral-7b-instruct-v0.1',
+    id: '@cf/google/gemma-7b-it-lora',
+    name: 'gemma-7b-it-lora',
     provider: 'workers-ai',
     type: 'chat'
 }, {
-    id: '@cf/thebloke/discolm-german-7b-v1-awq',
-    name: 'discolm-german-7b-v1-awq',
-    provider: 'workers-ai',
-    type: 'chat'
-}, {
-    id: '@cf/tiiuae/falcon-7b-instruct',
-    name: 'falcon-7b-instruct',
-    provider: 'workers-ai',
-    type: 'chat'
-}, {
-    id: '@hf/thebloke/llama-2-13b-chat-awq',
-    name: 'llama-2-13b-chat-awq',
-    provider: 'workers-ai',
-    type: 'chat'
-}, {
-    id: '@hf/thebloke/llamaguard-7b-awq',
-    name: 'llamaguard-7b-awq',
-    provider: 'workers-ai',
-    type: 'chat'
-}, {
-    id: '@hf/thebloke/mistral-7b-instruct-v0.1-awq',
-    name: 'mistral-7b-instruct-v0.1-awq',
+    id: '@hf/thebloke/openhermes-2.5-mistral-7b-awq',
+    name: 'openhermes-2.5-mistral-7b-awq',
     provider: 'workers-ai',
     type: 'chat'
 }, {
@@ -117,8 +108,13 @@ export const textGenModels: Model[] = [{
     provider: 'workers-ai',
     type: 'chat'
 }, {
-    id: '@cf/openchat/openchat-3.5-0106',
-    name: 'openchat-3.5-0106',
+    id: '@hf/nexusflow/starling-lm-7b-beta',
+    name: 'starling-lm-7b-beta',
+    provider: 'workers-ai',
+    type: 'chat'
+}, {
+    id: '@cf/meta/llama-3-8b-instruct',
+    name: 'llama-3-8b-instruct',
     provider: 'workers-ai',
     type: 'chat'
 }]
@@ -140,4 +136,4 @@ export const imageGenModels: Model[] = [{
     type: 'text-to-image'
 }]
 
-export const models: Model[] = [...textGenModels, ...imageGenModels]
+export const models: Model[] = [...uniModals, ...textGenModels, ...imageGenModels]

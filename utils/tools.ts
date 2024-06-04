@@ -18,7 +18,7 @@ export const clearToken = () => {
     localStorage.removeItem(TOKEN_KEY);
 }
 
-export const scrollStream = (el: HTMLElement, distance: number = 100) => {
+export const scrollStream = (el: HTMLElement, distance: number = 200) => {
     useThrottleFn(() => {
         (el.scrollTop + el.clientHeight >= el.scrollHeight - distance) && el.scrollTo({
             top: el.scrollHeight,
@@ -35,9 +35,10 @@ export function scrollToTop(el: HTMLElement | null) {
 }
 
 export function getSystemPrompt() {
+    const content = JSON.parse(localStorage.getItem('settings') || '{}').system_prompt || 'You are ChatGPT, a large language model trained by OpenAI. Follow the user\'s instructions carefully. Respond using markdown.'
     const p: OpenAIMessage = {
         role: 'system',
-        content: 'You are ChatGPT, a large language model trained by OpenAI. Follow the user\'s instructions carefully. Respond using markdown.'
+        content
     }
     return p
 }
@@ -68,4 +69,38 @@ export function getMessages(history: HistoryItem[], options?: {
             role: history[history.length - 2].role,
             content: history[history.length - 2].content
         })
+}
+
+export function handleImgZoom(img: HTMLImageElement) {
+    const container = document.createElement('div')
+    container.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s;
+    opacity: 0;
+    z-index: 9999;
+  `
+    const imgZoom = document.createElement('img')
+    imgZoom.src = img.src
+    const screenW = screen.width
+    imgZoom.style.cssText = `
+        width: ${screenW > 768 ? '85%' : '100%'};
+        height: ${screenW > 768 ? '85%' : '100%'};
+        object-fit: contain;
+    `
+    container.appendChild(imgZoom)
+    document.body.appendChild(container)
+    container.addEventListener('click', () => {
+        container.style.opacity = '0'
+        setTimeout(() => {
+            document.body.removeChild(container)
+        }, 300)
+    })
+
+    imgZoom.height
+    container.style.opacity = '1'
 }
