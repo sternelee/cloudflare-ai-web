@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {handleImgZoom} from "~/utils/tools";
+import {compressionFile, handleImgZoom} from "~/utils/tools";
 
 const input = ref('')
 const addHistory = ref(true)
@@ -52,10 +52,6 @@ function checkFile(file: File) {
     alert(imageType.join(', ') + ' only')
     return false
   }
-  if (file.size > 1024 * 1024 * 15) {
-    alert('The image size should be less than 15MB')
-    return false
-  }
   return true
 }
 
@@ -64,14 +60,18 @@ function handleAddFiles() {
   input.type = 'file'
   input.accept = imageType.join(',')
   input.multiple = true
-  input.onchange = () => {
-    const files = Array.from(input.files || [])
-    files.forEach(file => {
-      if (!checkFile(file)) return
+  input.onchange = async () => {
+    document.body.style.cursor = 'wait'
 
+    const files = Array.from(input.files || [])
+    for (const f of files) {
+      if (!checkFile(f)) continue;
+      const file = await compressionFile(f, f.type)
       const url = URL.createObjectURL(file)
       fileList.value.push({file, url})
-    })
+    }
+
+    document.body.style.cursor = 'auto'
   }
   input.click()
 }
@@ -124,7 +124,7 @@ const handlePaste = (e: ClipboardEvent) => {
         <UButton class="m-1" @click="addHistory = !addHistory" :color="addHistory?'primary':'gray'"
                  icon="i-heroicons-clock-solid"/>
       </UTooltip>
-      <UTooltip v-if="selectedModel.type === 'universal'" :text="$t('add_image')">
+      <UTooltip v-if="selectedModel.type === 'universal'" :text="$t('add_image') + '(' + $t('support_paste') + ')'">
         <UButton @click="handleAddFiles" color="white" class="m-1" icon="i-heroicons-paper-clip-16-solid"/>
       </UTooltip>
       <UTextarea v-model="input" :placeholder="$t('please_input_text') + '...' "

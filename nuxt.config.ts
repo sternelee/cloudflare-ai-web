@@ -38,19 +38,6 @@ export default defineNuxtConfig({
             ]
         }
     },
-    vite: {
-        build: {
-            rollupOptions: {
-                output: {
-                    manualChunks: (id) => {
-                        if (id.includes('node_modules')) {
-                            return 'vendor'
-                        }
-                    }
-                }
-            }
-        }
-    },
     i18n: {
         vueI18n: './i18n.config.ts',
         strategy: 'no_prefix',
@@ -58,7 +45,7 @@ export default defineNuxtConfig({
     }
     // nitro: {
     //     vercel: {
-    //         regions: ["cle1", "iad1", "pdx1", "sfo1", "sin1", "syd1", "hnd1", "kix1"]
+    //         regions: ["sin1", "syd1", "sfo1", "iad1", "pdx1", "cle1"]
     //     }
     // }
 })
